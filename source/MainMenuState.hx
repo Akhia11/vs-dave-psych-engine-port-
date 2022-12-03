@@ -32,21 +32,96 @@ class MainMenuState extends MusicBeatState
 	private var camGame:FlxCamera;
 	private var camAchievement:FlxCamera;
 	
-	var optionShit:Array<String> = [
-		'story_mode',
-		'freeplay',
-		#if MODS_ALLOWED 'mods', #end
-		#if ACHIEVEMENTS_ALLOWED 'awards', #end
+	var optionShit:Array<String> = 
+	[
+		'story mode', 
+		'freeplay', 
 		'credits',
-		#if !switch 'donate', #end
-		'options'
+		'ost',
+		'options',
+		'discord'
+	];
+	
+	var languagesOptions:Array<String> =
+	[
+		'main_story',
+		'main_freeplay',
+		'main_credits',
+		'main_ost',
+		'main_options',
+		'main_discord'
 	];
 
-	var magenta:FlxSprite;
-	var camFollow:FlxObject;
-	var camFollowPos:FlxObject;
-	var debugKeys:Array<FlxKey>;
+	var languagesDescriptions:Array<String> =
+	[
+		'desc_story',
+		'desc_freeplay',
+		'desc_credits',
+		'desc_ost',
+		'desc_options',
+		'desc_discord'
+	];
+	
+	public static var firstStart:Bool = true;
 
+	public static var finishedFunnyMove:Bool = false;
+
+	public static var daRealEngineVer:String = 'Dave';
+	public static var engineVer:String = '3.0b';
+
+	public static var engineVers:Array<String> = 
+	[
+		'Dave', 
+		'Bambi', 
+		'Tristan'
+	];
+
+	public static var 2EngineVer:String = "DAVE";
+
+	var bg:FlxSprite;
+	var magenta:FlxSprite;
+	var selectUi:FlxSprite;
+	var bigIcons:FlxSprite;
+	var camFollow:FlxObject;
+	public static var bgPaths:Array<String> = [
+		'Aadsta',
+		'ArtiztGmer',
+		'DeltaKastel',
+		'DeltaKastel2',
+		'DeltaKastel3',
+		'DeltaKastel4',
+		'DeltaKastel5',
+		'diamond man',
+		'Jukebox',
+		'kiazu',
+		'Lancey',
+		'mamakotomi',
+		'mantis',
+		'mepperpint',
+		'morie',
+		'neon',
+		'Onuko',
+		'ps',
+		'ricee_png',
+		'sk0rbias',
+		'SwagnotrllyTheMod',
+		'zombought',
+	];
+
+	var logoBl:FlxSprite;
+
+	var lilMenuGuy:FlxSprite;
+
+	var awaitingExploitation:Bool;
+	var curOptText:FlxText;
+	var curOptDesc:FlxText;
+
+	var voidShader:Shaders.GlitchEffect;
+	
+	var prompt:Prompt;
+	var canInteract:Bool = true;
+
+	var black:FlxSprite;
 	override function create()
 	{
 		#if MODS_ALLOWED
@@ -72,32 +147,37 @@ class MainMenuState extends MusicBeatState
 		transOut = FlxTransitionableState.defaultTransOut;
 
 		persistentUpdate = persistentDraw = true;
+		
+		engineVers[FlxG.random.int(0, 2)];
 
 		var yScroll:Float = Math.max(0.25 - (0.05 * (optionShit.length - 4)), 0.1);
-		var bg:FlxSprite = new FlxSprite(-80).loadGraphic(Paths.image('menuBG'));
-		bg.scrollFactor.set(0, yScroll);
-		bg.setGraphicSize(Std.int(bg.width * 1.175));
-		bg.updateHitbox();
-		bg.screenCenter();
-		bg.antialiasing = ClientPrefs.globalAntialiasing;
-		add(bg);
+    var	bg = new FlxSprite(-80).loadGraphic(randomizeBG());
+			bg.scrollFactor.set();
+			bg.setGraphicSize(Std.int(bg.width * 1.1));
+			bg.updateHitbox();
+			bg.screenCenter();
+			bg.antialiasing = true;
+			bg.color = 0xFFFDE871;
+			add(bg);
 
 		camFollow = new FlxObject(0, 0, 1, 1);
 		camFollowPos = new FlxObject(0, 0, 1, 1);
 		add(camFollow);
 		add(camFollowPos);
 
-		magenta = new FlxSprite(-80).loadGraphic(Paths.image('menuDesat'));
-		magenta.scrollFactor.set(0, yScroll);
-		magenta.setGraphicSize(Std.int(magenta.width * 1.175));
-		magenta.updateHitbox();
-		magenta.screenCenter();
-		magenta.visible = false;
-		magenta.antialiasing = ClientPrefs.globalAntialiasing;
-		magenta.color = 0xFFfd719b;
-		add(magenta);
+		magenta = new FlxSprite(-600, -200).loadGraphic(bg.graphic);
+			magenta.scrollFactor.set();
+			magenta.antialiasing = false;
+			magenta.visible = false;
+			magenta.color = FlxColor.multiply(0xFFfd719b, FlxColor.fromRGB(50, 50, 50));
+			add(magenta);
+			
+			selectUi = new FlxSprite(0, 0).loadGraphic(Paths.image('mainMenu/Select_Thing', 'preload'));
+		selectUi.scrollFactor.set(0, 0);
+		selectUi.antialiasing = true;
+		selectUi.updateHitbox();
+		add(selectUi);
 		
-		// magenta.scrollFactor.set();
 
 		menuItems = new FlxTypedGroup<FlxSprite>();
 		add(menuItems);
@@ -109,24 +189,41 @@ class MainMenuState extends MusicBeatState
 
 		for (i in 0...optionShit.length)
 		{
-			var offset:Float = 108 - (Math.max(optionShit.length, 4) - 4) * 80;
-			var menuItem:FlxSprite = new FlxSprite(0, (i * 140)  + offset);
-			menuItem.scale.x = scale;
-			menuItem.scale.y = scale;
-			menuItem.frames = Paths.getSparrowAtlas('mainmenu/menu_' + optionShit[i]);
-			menuItem.animation.addByPrefix('idle', optionShit[i] + " basic", 24);
-			menuItem.animation.addByPrefix('selected', optionShit[i] + " white", 24);
+			var currentOptionShit = optionShit[i];
+			var menuItem:FlxSprite = new FlxSprite(FlxG.width * 1.6, 0);
+			menuItem.frames = tex;
+			menuItem.animation.addByPrefix('idle', (currentOptionShit == 'freeplay glitch' ? 'freeplay' : currentOptionShit) + " basic", 24);
+			menuItem.animation.addByPrefix('selected', (currentOptionShit == 'freeplay glitch' ? 'freeplay' : currentOptionShit) + " white", 24);
 			menuItem.animation.play('idle');
+			menuItem.antialiasing = false;
+			menuItem.setGraphicSize(128, 128);
 			menuItem.ID = i;
-			menuItem.screenCenter(X);
-			menuItems.add(menuItem);
-			var scr:Float = (optionShit.length - 4) * 0.135;
-			if(optionShit.length < 6) scr = 0;
-			menuItem.scrollFactor.set(0, scr);
-			menuItem.antialiasing = ClientPrefs.globalAntialiasing;
-			//menuItem.setGraphicSize(Std.int(menuItem.width * 0.58));
 			menuItem.updateHitbox();
+			//menuItem.screenCenter(Y);
+			//menuItem.alpha = 0; //TESTING
+			menuItems.add(menuItem);
+			menuItem.scrollFactor.set(0, 1);
+			if (firstStart)
+			{
+				FlxTween.tween(menuItem, {x: FlxG.width / 2 - 450 + (i * 160)}, 1 + (i * 0.25), {
+					ease: FlxEase.expoInOut,
+					onComplete: function(flxTween:FlxTween)
+					{
+						finishedFunnyMove = true;
+						//menuItem.screenCenter(Y);
+						changeItem();
+					}
+				});
+			}
+			else
+			{
+				//menuItem.screenCenter(Y);
+				menuItem.x = FlxG.width / 2 - 450 + (i * 160);
+				changeItem();
+			}
 		}
+		
+		firstStart = false;
 
 		FlxG.camera.follow(camFollowPos, null, 1);
 
@@ -216,8 +313,6 @@ class MainMenuState extends MusicBeatState
 				{
 					selectedSomethin = true;
 					FlxG.sound.play(Paths.sound('confirmMenu'));
-
-					if(ClientPrefs.flashing) FlxFlicker.flicker(magenta, 1.1, 0.15, false);
 
 					menuItems.forEach(function(spr:FlxSprite)
 					{
