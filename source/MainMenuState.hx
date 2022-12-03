@@ -76,7 +76,7 @@ class MainMenuState extends MusicBeatState
 		'Tristan'
 	];
 
-	public static var 2EngineVer:String = "DAVE";
+	public static var wewEngineVer:String = "DAVE";
 
 	var bg:FlxSprite;
 	var magenta:FlxSprite;
@@ -133,7 +133,6 @@ class MainMenuState extends MusicBeatState
 		// Updating Discord Rich Presence
 		DiscordClient.changePresence("In the Menus", null);
 		#end
-		debugKeys = ClientPrefs.copyKey(ClientPrefs.keyBinds.get('debug_1'));
 
 		camGame = new FlxCamera();
 		camAchievement = new FlxCamera();
@@ -161,9 +160,7 @@ class MainMenuState extends MusicBeatState
 			add(bg);
 
 		camFollow = new FlxObject(0, 0, 1, 1);
-		camFollowPos = new FlxObject(0, 0, 1, 1);
 		add(camFollow);
-		add(camFollowPos);
 
 		magenta = new FlxSprite(-600, -200).loadGraphic(bg.graphic);
 			magenta.scrollFactor.set();
@@ -224,9 +221,7 @@ class MainMenuState extends MusicBeatState
 		}
 		
 		firstStart = false;
-
-		FlxG.camera.follow(camFollowPos, null, 1);
-
+		
 		var versionShit:FlxText = new FlxText(12, FlxG.height - 44, 0, "Psych Engine v" + psychEngineVersion, 12);
 		versionShit.scrollFactor.set();
 		versionShit.setFormat("VCR OSD Mono", 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
@@ -254,7 +249,7 @@ class MainMenuState extends MusicBeatState
 		#end
 
     #if android
-		addVirtualPad(UP_DOWN, A_B_E);
+		addVirtualPad(LEFT_RIGHT, A_B);
     #end
 
 		super.create();
@@ -280,8 +275,7 @@ class MainMenuState extends MusicBeatState
 		}
 
 		var lerpVal:Float = CoolUtil.boundTo(elapsed * 7.5, 0, 1);
-		camFollowPos.setPosition(FlxMath.lerp(camFollowPos.x, camFollow.x, lerpVal), FlxMath.lerp(camFollowPos.y, camFollow.y, lerpVal));
-
+		
 		if (!selectedSomethin)
 		{
 			if (controls.UI_UP_P)
@@ -354,14 +348,6 @@ class MainMenuState extends MusicBeatState
 					});
 				}
 			}
-			#if (desktop || android)
-			else if (FlxG.keys.anyJustPressed(debugKeys) #if android || virtualPad.buttonE.justPressed #end)
-			{
-				selectedSomethin = true;
-				MusicBeatState.switchState(new MasterEditorMenu());
-			}
-			#end
-		}
 
 		super.update(elapsed);
 
